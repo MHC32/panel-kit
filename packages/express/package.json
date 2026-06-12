@@ -1,6 +1,6 @@
 {
   "name": "@panel-kit/express",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Express middleware for panel-kit — mounts admin API + serves UI",
   "main": "src/index.js",
   "exports": {
@@ -13,7 +13,15 @@
   "scripts": {
     "test": "node --test"
   },
-  "keywords": ["admin", "panel", "prisma", "crud", "express", "middleware", "panel-kit"],
+  "keywords": [
+    "admin",
+    "panel",
+    "prisma",
+    "crud",
+    "express",
+    "middleware",
+    "panel-kit"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",

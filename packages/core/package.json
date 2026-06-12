@@ -1,6 +1,6 @@
 {
   "name": "@panel-kit/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Core engine for panel-kit — DMMF reader, registry, CRUD resolver, audit log",
   "main": "src/index.js",
   "exports": {
@@ -13,7 +13,14 @@
   "scripts": {
     "test": "node --test test/*.test.js"
   },
-  "keywords": ["admin", "panel", "prisma", "crud", "express", "panel-kit"],
+  "keywords": [
+    "admin",
+    "panel",
+    "prisma",
+    "crud",
+    "express",
+    "panel-kit"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",

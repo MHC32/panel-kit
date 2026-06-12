@@ -1,6 +1,6 @@
 {
   "name": "@panel-kit/ui",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Pre-built React admin UI for panel-kit — sidebar, CRUD pages, dashboard",
   "main": "dist/index.html",
   "type": "module",
@@ -12,7 +12,14 @@
     "build": "vite build",
     "prepublishOnly": "vite build"
   },
-  "keywords": ["admin", "panel", "react", "ui", "dashboard", "panel-kit"],
+  "keywords": [
+    "admin",
+    "panel",
+    "react",
+    "ui",
+    "dashboard",
+    "panel-kit"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
