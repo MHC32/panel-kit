@@ -82,9 +82,9 @@ export function isAutoReadOnly(fieldName, widgetConfig) {
 
 // Construit la config complète d'un formulaire à partir de la config du registry
 // Retourne les champs dans l'ordre déclaré, avec leur widget résolu
-export function buildFormFields(modelConfig) {
+export function buildFormFields(modelConfig, enumMap = {}) {
   const fieldMap = parseModelFields(modelConfig.fields)
-  const { fields, readOnly, hidden, sections } = modelConfig.form
+  const { fields, readOnly, hidden } = modelConfig.form
 
   return fields
     .filter(name => !hidden.includes(name))
@@ -92,10 +92,17 @@ export function buildFormFields(modelConfig) {
       const widget = fieldMap[name]
       if (!widget) return null
 
-      return {
+      const resolved = {
         ...widget,
         readOnly: readOnly.includes(name) || isAutoReadOnly(name, widget),
       }
+
+      // Injecter les valeurs de l'enum depuis le DMMF
+      if (widget.widget === 'enum-select' && widget.enumName) {
+        resolved.enumValues = enumMap[widget.enumName] ?? []
+      }
+
+      return resolved
     })
     .filter(Boolean)
 }
@@ -115,7 +122,7 @@ export function buildListColumns(modelConfig) {
 }
 
 // Construit la config des filtres disponibles pour un modèle
-export function buildFilterConfig(modelConfig) {
+export function buildFilterConfig(modelConfig, enumMap = {}) {
   const fieldMap = parseModelFields(modelConfig.fields)
   const { filters } = modelConfig.list
 
@@ -123,13 +130,23 @@ export function buildFilterConfig(modelConfig) {
     .map(name => {
       const widget = fieldMap[name]
       if (!widget || !widget.filterWidget) return null
-      return {
+
+      const config = {
         name,
         filterWidget: widget.filterWidget,
         type:         widget.type,
         enumName:     widget.enumName ?? null,
         relatedModel: widget.relatedModel ?? null,
+        enumValues:   null,
       }
+
+      // Injecter les valeurs de l'enum pour le filtre
+      if (widget.widget === 'enum-select' && widget.enumName) {
+        config.filterWidget = 'enum-select'
+        config.enumValues   = enumMap[widget.enumName] ?? []
+      }
+
+      return config
     })
     .filter(Boolean)
 }

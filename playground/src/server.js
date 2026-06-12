@@ -16,6 +16,11 @@ app.use('/admin', createPanel({
   dmmf:     Prisma.dmmf,
   provider: 'sqlite',
   secret:   process.env.ADMIN_SECRET ?? 'dev-secret-change-in-prod',
+  theme: {
+    appName: 'Playground Admin',
+    accent:  '#7C3AED',
+    rail:    '#1A0A2E',
+  },
 
   auth: {
     userModel:     'User',

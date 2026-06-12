@@ -2,15 +2,30 @@ import { Router } from 'express'
 import createError from 'http-errors'
 import { listRecords, getRecord, createRecord, updateRecord, deleteRecord, deleteManyRecords } from '@panel-kit/core'
 import { buildFormFields, buildListColumns, buildFilterConfig } from '@panel-kit/core'
-import { requireAuth } from './auth-router.js'
+import { requireAuth, resolvePermissions } from './auth-router.js'
 
-export function buildApiRouter({ prisma, registry, secret }) {
+// Transforme un message Prisma en { field: message } ou null
+function parsePrismaError(message) {
+  if (!message) return null
+
+  // P2002 — Unique constraint
+  const uniqueMatch = message.match(/Unique constraint failed on the fields[:\s]*\(`(.+?)`\)/)
+  if (uniqueMatch) return { [uniqueMatch[1]]: 'Cette valeur est déjà utilisée' }
+
+  // P2003 — Foreign key constraint
+  const fkMatch = message.match(/Foreign key constraint failed on the field[:\s]*`(.+?)`/)
+  if (fkMatch) return { [fkMatch[1].replace('Id', '')]: 'Référence invalide' }
+
+  return null
+}
+
+export function buildApiRouter({ prisma, registry, secret, getPermissions }) {
   const router = Router()
 
   // Toutes les routes API nécessitent un token valide
   router.use(requireAuth(secret))
 
-  // GET /admin/api/meta — retourne tous les modèles enregistrés avec leur config UI
+  // GET /admin/api/meta — retourne thème + modèles enregistrés avec leur config UI
   // C'est la route que la React app appelle au démarrage pour construire la sidebar
   // et savoir quels champs/filtres/widgets afficher
   router.get('/meta', (req, res) => {
@@ -21,11 +36,11 @@ export function buildApiRouter({ prisma, registry, secret }) {
       list: {
         ...modelConfig.list,
         columns: buildListColumns(modelConfig),
-        filterConfig: buildFilterConfig(modelConfig),
+        filterConfig: buildFilterConfig(modelConfig, registry._enums ?? {}),
       },
       form: {
         ...modelConfig.form,
-        formFields: buildFormFields(modelConfig),
+        formFields: buildFormFields(modelConfig, registry._enums ?? {}),
       },
       actions: modelConfig.actions.map(a => ({
         label:   a.label,
@@ -36,14 +51,17 @@ export function buildApiRouter({ prisma, registry, secret }) {
       })),
     }))
 
-    res.json({ success: true, models })
+    res.json({
+      success: true,
+      app:     registry._theme ?? { appName: 'Admin', accent: '#2563EB', rail: '#1E1E2E', railAccent: null, logo: null },
+      models,
+    })
   })
 
   // ── Routes CRUD par modèle ──────────────────────────────────────────────
 
   // Middleware : résoudre le modèle depuis :model param
   function resolveModel(req, res, next) {
-    // Prisma utilise PascalCase : "user" → "User", "invoiceItem" → "InvoiceItem"
     const raw = req.params.model
     const modelName = raw.charAt(0).toUpperCase() + raw.slice(1)
     const modelConfig = registry.getModel(modelName)
@@ -56,8 +74,25 @@ export function buildApiRouter({ prisma, registry, secret }) {
     next()
   }
 
+  // Middleware : vérifier qu'une action est autorisée pour ce modèle + utilisateur
+  // action = 'view' | 'create' | 'edit' | 'delete'
+  function checkPermission(action) {
+    return async (req, res, next) => {
+      if (!getPermissions) return next() // mode permissif par défaut
+      try {
+        const perms = await resolvePermissions(getPermissions, req.panelUser, req.modelConfig.name)
+        if (!perms[action]) {
+          return next(createError(403, `Accès refusé — action "${action}" non autorisée sur "${req.modelConfig.name}"`))
+        }
+        next()
+      } catch (err) {
+        next(err)
+      }
+    }
+  }
+
   // GET /admin/api/:model?page=1&search=foo&sortField=name&filters[status]=PAID
-  router.get('/:model', resolveModel, async (req, res, next) => {
+  router.get('/:model', resolveModel, checkPermission('view'), async (req, res, next) => {
     try {
       const result = await listRecords(prisma, req.modelConfig, {
         page:      req.query.page,
@@ -74,7 +109,7 @@ export function buildApiRouter({ prisma, registry, secret }) {
   })
 
   // GET /admin/api/:model/:id
-  router.get('/:model/:id', resolveModel, async (req, res, next) => {
+  router.get('/:model/:id', resolveModel, checkPermission('view'), async (req, res, next) => {
     try {
       const record = await getRecord(prisma, req.modelConfig, req.params.id)
       if (!record) throw createError(404, 'Enregistrement introuvable')
@@ -85,7 +120,7 @@ export function buildApiRouter({ prisma, registry, secret }) {
   })
 
   // POST /admin/api/:model
-  router.post('/:model', resolveModel, async (req, res, next) => {
+  router.post('/:model', resolveModel, checkPermission('create'), async (req, res, next) => {
     try {
       const record = await createRecord(prisma, req.modelConfig, req.body ?? {})
       res.status(201).json({ success: true, data: record })
@@ -95,7 +130,7 @@ export function buildApiRouter({ prisma, registry, secret }) {
   })
 
   // PUT /admin/api/:model/:id
-  router.put('/:model/:id', resolveModel, async (req, res, next) => {
+  router.put('/:model/:id', resolveModel, checkPermission('edit'), async (req, res, next) => {
     try {
       const record = await updateRecord(prisma, req.modelConfig, req.params.id, req.body ?? {})
       res.json({ success: true, data: record })
@@ -105,7 +140,7 @@ export function buildApiRouter({ prisma, registry, secret }) {
   })
 
   // DELETE /admin/api/:model/:id
-  router.delete('/:model/:id', resolveModel, async (req, res, next) => {
+  router.delete('/:model/:id', resolveModel, checkPermission('delete'), async (req, res, next) => {
     try {
       await deleteRecord(prisma, req.modelConfig, req.params.id)
       res.json({ success: true })
@@ -115,7 +150,7 @@ export function buildApiRouter({ prisma, registry, secret }) {
   })
 
   // POST /admin/api/:model/bulk-delete  { ids: [...] }
-  router.post('/:model/bulk-delete', resolveModel, async (req, res, next) => {
+  router.post('/:model/bulk-delete', resolveModel, checkPermission('delete'), async (req, res, next) => {
     try {
       const { ids } = req.body ?? {}
       if (!Array.isArray(ids) || !ids.length) throw createError(400, 'ids requis')
@@ -143,8 +178,19 @@ export function buildApiRouter({ prisma, registry, secret }) {
   })
 
   // Gestionnaire d'erreurs pour ce router
+  // Transforme les erreurs Prisma en format structuré { field, message }
   router.use((err, req, res, _next) => {
     const status = err.status ?? 500
+    const fieldError = parsePrismaError(err.message)
+
+    if (fieldError) {
+      return res.status(422).json({
+        success:    false,
+        error:      'Erreur de validation',
+        fieldError,
+      })
+    }
+
     res.status(status).json({
       success: false,
       error: err.message ?? 'Erreur interne',

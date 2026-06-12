@@ -3,14 +3,15 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import createError from 'http-errors'
 
-export function buildAuthRouter({ prisma, secret, auth }) {
+export function buildAuthRouter({ prisma, secret, auth, registry }) {
   const router = Router()
 
   const {
-    userModel     = 'User',
-    loginField    = 'email',
-    passwordField = 'passwordHash',
-    isAdmin       = (user) => user.isAdmin === true || user.role === 'SUPER_ADMIN',
+    userModel      = 'User',
+    loginField     = 'email',
+    passwordField  = 'passwordHash',
+    isAdmin        = (user) => user.isAdmin === true || user.role === 'SUPER_ADMIN',
+    getPermissions = null,   // (user, modelName) => { view, create, edit, delete }
   } = auth
 
   // Accès dynamique au modèle User sur l'instance Prisma
@@ -71,12 +72,22 @@ export function buildAuthRouter({ prisma, secret, auth }) {
       const user = await delegate.findUnique({ where: { id: req.panelUser.sub } })
       if (!user) throw createError(401, 'Session invalide')
 
+      // Calculer les permissions par modèle si getPermissions est défini
+      let permissions = null
+      if (getPermissions && registry) {
+        permissions = {}
+        for (const model of registry.getAllModels()) {
+          permissions[model.name] = await resolvePermissions(getPermissions, user, model.name)
+        }
+      }
+
       res.json({
         success: true,
         user: {
           id:    user.id,
           email: user[loginField],
           name:  user.firstName ? `${user.firstName} ${user.lastName ?? ''}`.trim() : user.name ?? user[loginField],
+          permissions,
         },
       })
     } catch (err) {
@@ -85,6 +96,19 @@ export function buildAuthRouter({ prisma, secret, auth }) {
   })
 
   return router
+}
+
+// Résout les permissions pour un modèle — retourne toujours un objet complet
+// Default permissif : tout à true si pas de getPermissions déclaré
+export async function resolvePermissions(getPermissions, user, modelName) {
+  if (!getPermissions) return { view: true, create: true, edit: true, delete: true }
+  const result = await getPermissions(user, modelName)
+  return {
+    view:   result?.view   ?? true,
+    create: result?.create ?? true,
+    edit:   result?.edit   ?? true,
+    delete: result?.delete ?? true,
+  }
 }
 
 // Middleware de vérification du token panel-kit

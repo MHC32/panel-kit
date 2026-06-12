@@ -11,10 +11,11 @@ const AUTO_HIDDEN = new Set([
 
 export class AdminRegistry {
   constructor() {
-    this._models = []       // modèles lus depuis le DMMF
-    this._configs = new Map() // configs déclarées par le dev
-    this._prisma = null
-    this._loaded = false
+    this._models  = []
+    this._configs = new Map()
+    this._enums   = {}
+    this._prisma  = null
+    this._loaded  = false
   }
 
   // Appelé par createPanel() au démarrage
@@ -32,6 +33,14 @@ export class AdminRegistry {
     }
 
     this._models = dmmf.datamodel.models
+
+    // Map enumName → string[] des valeurs possible
+    // ex: { OrderStatus: ['PENDING', 'PAID', 'CANCELLED'] }
+    this._enums = {}
+    for (const enumDef of (dmmf.datamodel.enums ?? [])) {
+      this._enums[enumDef.name] = enumDef.values.map(v => v.name)
+    }
+
     this._loaded = true
     return this
   }
@@ -107,11 +116,14 @@ export class AdminRegistry {
       fields: model.fields,
 
       list: {
-        fields:  listConfig.fields  ?? defaultListFields,
-        search:  listConfig.search  ?? [],
-        filters: listConfig.filters ?? [],
-        sort:    listConfig.sort    ?? { field: 'id', dir: 'asc' },
-        perPage: listConfig.perPage ?? 20,
+        fields:       listConfig.fields       ?? defaultListFields,
+        search:       listConfig.search       ?? [],
+        filters:      listConfig.filters      ?? [],
+        sort:         listConfig.sort         ?? { field: 'id', dir: 'asc' },
+        perPage:      listConfig.perPage      ?? 20,
+        // Colonnes cliquables → lien vers édition (comme list_display_links Django)
+        // null = auto (id + première colonne), [] = aucun lien, ['name'] = custom
+        displayLinks: listConfig.displayLinks ?? null,
       },
 
       form: {

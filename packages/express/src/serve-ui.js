@@ -2,7 +2,7 @@ import { createRequire } from 'module'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { existsSync } from 'fs'
-import { Router } from 'express'
+import { Router, static as expressStatic } from 'express'
 
 // Sert les fichiers statiques de la React app pré-buildée (@panel-kit/ui/dist)
 export function serveUI({ basePath = '/admin' }) {
@@ -24,7 +24,6 @@ export function serveUI({ basePath = '/admin' }) {
   }
 
   if (!uiDistPath) {
-    // UI non buildée — retourner une page d'instruction
     router.use((req, res) => {
       res.send(`
         <html><body style="font-family:sans-serif;padding:2rem">
@@ -37,8 +36,7 @@ export function serveUI({ basePath = '/admin' }) {
   }
 
   // Servir les assets statiques (JS, CSS, images)
-  const { default: serveStatic } = await_import_workaround('serve-static')
-  router.use(serveStatic(uiDistPath))
+  router.use(expressStatic(uiDistPath))
 
   // SPA fallback — toutes les routes non-asset retournent index.html
   router.use((req, res) => {
@@ -46,9 +44,4 @@ export function serveUI({ basePath = '/admin' }) {
   })
 
   return router
-}
-
-function await_import_workaround(pkg) {
-  // eslint-disable-next-line no-new-func
-  return new Function(`return import('${pkg}')`)().then(m => m.default ?? m)
 }
