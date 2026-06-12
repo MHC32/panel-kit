@@ -33,6 +33,7 @@ app.use('/admin', createPanel({
   // (si omis → tous les modèles sont auto-enregistrés)
   models: {
     User: {
+      featured: true,
       list: {
         fields:  ['id', 'email', 'firstName', 'lastName', 'role', 'isActive', 'createdAt'],
         search:  ['email', 'firstName', 'lastName'],
@@ -45,6 +46,7 @@ app.use('/admin', createPanel({
     },
 
     Product: {
+      featured: true,
       list: {
         fields:  ['id', 'name', 'price', 'stock', 'isActive', 'createdAt'],
         search:  ['name', 'description'],
@@ -74,6 +76,7 @@ app.use('/admin', createPanel({
     },
 
     Order: {
+      featured: true,
       list: {
         fields:        ['id', 'status', 'total', 'userId', 'createdAt'],
         filters:       ['status'],

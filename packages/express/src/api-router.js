@@ -34,6 +34,7 @@ export function buildApiRouter({ prisma, registry, secret, getPermissions, audit
       name:        modelConfig.name,
       label:       modelConfig.label,
       labelPlural: modelConfig.labelPlural,
+      featured:    modelConfig.featured ?? false,
       list: {
         ...modelConfig.list,
         columns: buildListColumns(modelConfig),
@@ -72,6 +73,46 @@ export function buildApiRouter({ prisma, registry, secret, getPermissions, audit
       app:     registry._theme ?? { appName: 'Admin', accent: '#2563EB', rail: '#1E1E2E', railAccent: null, logo: null },
       models,
     })
+  })
+
+  // GET /admin/api/dashboard — counts + lastCreatedAt par modèle (un seul aller-retour DB)
+  router.get('/dashboard', async (req, res, next) => {
+    try {
+      const models = registry.getAllModels()
+
+      const stats = await Promise.all(
+        models.map(async modelConfig => {
+          const delegate = prisma[modelConfig.name.charAt(0).toLowerCase() + modelConfig.name.slice(1)]
+          if (!delegate) return { name: modelConfig.name, count: null, lastCreatedAt: null }
+
+          // Détecter si createdAt existe sur ce modèle
+          const hasCreatedAt = modelConfig.fields.some(f => f.name === 'createdAt')
+
+          const [count, latest] = await Promise.all([
+            delegate.count().catch(() => null),
+            hasCreatedAt
+              ? delegate.findFirst({
+                  orderBy: { createdAt: 'desc' },
+                  select:  { createdAt: true },
+                }).catch(() => null)
+              : Promise.resolve(null),
+          ])
+
+          return {
+            name:          modelConfig.name,
+            label:         modelConfig.label,
+            labelPlural:   modelConfig.labelPlural,
+            featured:      modelConfig.featured ?? false,
+            count,
+            lastCreatedAt: latest?.createdAt ?? null,
+          }
+        })
+      )
+
+      res.json({ success: true, stats })
+    } catch (err) {
+      next(err)
+    }
   })
 
   // ── Routes CRUD par modèle ──────────────────────────────────────────────

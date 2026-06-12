@@ -111,6 +111,8 @@ export class AdminRegistry {
       // Nom affiché dans la sidebar (ex: "InvoiceItem" → "Invoice Items")
       label:      userConfig.label ?? splitCamelCase(model.name),
       labelPlural: userConfig.labelPlural ?? splitCamelCase(model.name) + 's',
+      // featured: true → apparaît dans le KPI strip du dashboard
+      featured:    userConfig.featured ?? false,
 
       // Champs bruts du DMMF — utilisés par schema-parser pour les widgets
       fields: model.fields,
