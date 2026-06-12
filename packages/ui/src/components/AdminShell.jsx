@@ -2,28 +2,9 @@ import { useState } from 'react'
 import { NavLink, useLocation, Outlet } from 'react-router-dom'
 import { useAdmin } from '../hooks/useAdmin.jsx'
 import GlobalSearch from './GlobalSearch.jsx'
+import { modelIconKey } from '../lib/modelIcon.jsx'
 
-// ── Icône par modèle ──────────────────────────────────────────────────────────
-// Décompose "InvoiceItem" → ["invoice","item"], cherche le premier mot-clé connu
-const ICON_KEYWORDS = {
-  user: 'person',     customer: 'person',  staff: 'person',    employee: 'person',  member: 'person',
-  order: 'cart',      invoice: 'cart',     sale: 'cart',       purchase: 'cart',    booking: 'cart',
-  product: 'box',     item: 'box',         inventory: 'box',   stock: 'box',        sku: 'box',
-  category: 'tag',    tag: 'tag',          label: 'tag',       type: 'tag',
-  payment: 'dollar',  transaction: 'dollar', wallet: 'dollar', price: 'dollar',
-  room: 'building',   hotel: 'building',   tenant: 'building', property: 'building',
-  setting: 'gear',    config: 'gear',      option: 'gear',
-  post: 'doc',        article: 'doc',      page: 'doc',        content: 'doc',
-}
-
-function modelIcon(modelName) {
-  const words = modelName.replace(/([A-Z])/g, ' $1').trim().toLowerCase().split(' ')
-  for (const word of words) {
-    if (ICON_KEYWORDS[word]) return ICON_KEYWORDS[word]
-  }
-  return 'table'
-}
-
+// Icônes sidebar 14px
 const ICONS = {
   person:   <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>,
   cart:     <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
@@ -102,7 +83,7 @@ function Sidebar({ open, onClose }) {
         {/* Nav */}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px' }}>
           {/* Dashboard */}
-          <SidebarLink to="/dashboard" label="Dashboard" icon={ICONS.dashboard} />
+          <SidebarLink to="/dashboard" label="Dashboard" icon={ICONS['dashboard']} />
 
           {/* Séparateur modèles */}
           {visibleModels.length > 0 && (
@@ -113,7 +94,7 @@ function Sidebar({ open, onClose }) {
                   key={m.name}
                   to={`/model/${m.name.toLowerCase()}`}
                   label={m.labelPlural ?? m.name}
-                  icon={ICONS[modelIcon(m.name)]}
+                  icon={ICONS[modelIconKey(m.name)]}
                 />
               ))}
             </>

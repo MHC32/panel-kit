@@ -1,5 +1,6 @@
-import { useOutletContext } from 'react-router-dom'
+import { Link, useOutletContext } from 'react-router-dom'
 import { useAdmin } from '../hooks/useAdmin.jsx'
+import { modelIconKey, ICONS } from '../lib/modelIcon.jsx'
 
 export default function DashboardPage() {
   const { slots = {} } = useOutletContext() ?? {}
@@ -38,9 +39,12 @@ export default function DashboardPage() {
 }
 
 function ModelCard({ model }) {
+  const iconKey = modelIconKey(model.name)
+  const icon    = ICONS[iconKey] ?? ICONS.table
+
   return (
-    <a
-      href={`/model/${model.name.toLowerCase()}`}
+    <Link
+      to={`/model/${model.name.toLowerCase()}`}
       style={{
         display: 'block',
         background: 'var(--pk-surface)',
@@ -54,23 +58,21 @@ function ModelCard({ model }) {
       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--pk-border)'}
     >
       <div style={{
-        width: 32, height: 32,
-        borderRadius: 8,
+        width: 36, height: 36,
+        borderRadius: 10,
         background: 'var(--pk-accent-bg)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        marginBottom: 10,
+        marginBottom: 12,
+        color: 'var(--pk-accent)',
       }}>
-        <svg width="16" height="16" fill="none" stroke="var(--pk-accent)" strokeWidth="2" viewBox="0 0 24 24">
-          <rect x="3" y="3" width="18" height="18" rx="2"/>
-          <path d="M3 9h18M3 15h18M9 3v18"/>
-        </svg>
+        {icon}
       </div>
       <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--pk-ink)', marginBottom: 2 }}>
         {model.labelPlural ?? model.name}
       </p>
       <p style={{ fontSize: 11, color: 'var(--pk-muted)' }}>
-        {model.list.fields.length} colonnes
+        {model.list.fields.length} colonne{model.list.fields.length !== 1 ? 's' : ''}
       </p>
-    </a>
+    </Link>
   )
 }
