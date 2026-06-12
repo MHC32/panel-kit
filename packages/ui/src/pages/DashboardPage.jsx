@@ -1,6 +1,6 @@
 import { Link, useOutletContext } from 'react-router-dom'
 import { useAdmin } from '../hooks/useAdmin.jsx'
-import { modelIconKey, ICONS } from '../lib/modelIcon.jsx'
+import { ModelIcon } from '../lib/modelIcon.jsx'
 
 export default function DashboardPage() {
   const { slots = {} } = useOutletContext() ?? {}
@@ -39,9 +39,6 @@ export default function DashboardPage() {
 }
 
 function ModelCard({ model }) {
-  const iconKey = modelIconKey(model.name)
-  const icon    = ICONS[iconKey] ?? ICONS.table
-
   return (
     <Link
       to={`/model/${model.name.toLowerCase()}`}
@@ -65,7 +62,7 @@ function ModelCard({ model }) {
         marginBottom: 12,
         color: 'var(--pk-accent)',
       }}>
-        {icon}
+        <ModelIcon name={model.name} size={18} />
       </div>
       <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--pk-ink)', marginBottom: 2 }}>
         {model.labelPlural ?? model.name}
