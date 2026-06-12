@@ -1,11 +1,26 @@
 {
   "name": "@panel-kit/core",
   "version": "0.1.0",
-  "description": "Core engine — DMMF reader, registry, CRUD resolver",
+  "description": "Core engine for panel-kit — DMMF reader, registry, CRUD resolver, audit log",
   "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
   "type": "module",
+  "files": [
+    "src/"
+  ],
   "scripts": {
     "test": "node --test test/*.test.js"
+  },
+  "keywords": ["admin", "panel", "prisma", "crud", "express", "panel-kit"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MHC32/panel-kit"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "peerDependencies": {
     "@prisma/client": ">=5.0.0"
