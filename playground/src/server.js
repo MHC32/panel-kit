@@ -75,18 +75,33 @@ app.use('/admin', createPanel({
 
     Order: {
       list: {
-        fields:  ['id', 'status', 'total', 'userId', 'createdAt'],
-        filters: ['status'],
-        sort:    { field: 'createdAt', dir: 'desc' },
+        fields:        ['id', 'status', 'total', 'userId', 'createdAt'],
+        filters:       ['status'],
+        sort:          { field: 'createdAt', dir: 'desc' },
+        dateHierarchy: 'createdAt',   // date_hierarchy sur createdAt
       },
       form: {
         readOnly: ['id', 'total', 'createdAt', 'updatedAt'],
       },
+      // Inline : OrderItems dans le formulaire Order
+      inlines: [
+        {
+          model: 'OrderItem',
+          fk:    'orderId',
+          label: 'Lignes de commande',
+          extra: 1,
+        },
+      ],
     },
 
     Category: {},   // zéro config — tout auto
 
-    // OrderItem : pas déclaré → non exposé dans l'admin
+    // OrderItem exposé séparément pour l'autocomplete inline
+    OrderItem: {
+      form: {
+        readOnly: ['id', 'createdAt', 'updatedAt'],
+      },
+    },
   },
 }))
 

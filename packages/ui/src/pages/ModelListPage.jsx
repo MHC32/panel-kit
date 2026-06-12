@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useAdmin } from '../hooks/useAdmin.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import DateHierarchy from '../components/DateHierarchy.jsx'
 
 export default function ModelListPage() {
   const { modelName }       = useParams()
@@ -18,9 +19,11 @@ export default function ModelListPage() {
   const [filters,    setFilters]    = useState({})
   const [sortField,  setSortField]  = useState(model?.list?.sort?.field ?? 'id')
   const [sortDir,    setSortDir]    = useState(model?.list?.sort?.dir   ?? 'asc')
-  const [loading,    setLoading]    = useState(true)
-  const [selected,   setSelected]   = useState(new Set())
-  const [confirmDelete, setConfirmDelete] = useState(null) // { id?, bulk? }
+  const [perPage,      setPerPage]      = useState(model?.list?.perPage ?? 20)
+  const [dateFilter,   setDateFilter]   = useState(null) // { dateStart, dateEnd } | null
+  const [loading,      setLoading]      = useState(true)
+  const [selected,     setSelected]     = useState(new Set())
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   const fetchData = useCallback(async () => {
     if (!model) return
@@ -28,12 +31,18 @@ export default function ModelListPage() {
     try {
       const params = new URLSearchParams({
         page,
-        perPage:   model.list.perPage ?? 20,
+        perPage,
         sortField,
         sortDir,
       })
       if (search) params.set('search', search)
       Object.entries(filters).forEach(([k, v]) => v && params.set(`filters[${k}]`, v))
+      // Filtre date_hierarchy
+      if (dateFilter && model.list.dateHierarchy) {
+        const f = model.list.dateHierarchy
+        params.set(`filters[${f}][min]`, dateFilter.dateStart)
+        params.set(`filters[${f}][max]`, dateFilter.dateEnd)
+      }
 
       const res = await authFetch(`/${model.name.toLowerCase()}?${params}`)
       setData(res.data ?? [])
@@ -44,12 +53,12 @@ export default function ModelListPage() {
     } finally {
       setLoading(false)
     }
-  }, [model, page, search, filters, sortField, sortDir, authFetch])
+  }, [model, page, search, filters, sortField, sortDir, perPage, dateFilter, authFetch])
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // Reset page quand search/filters/tri changent
-  useEffect(() => { setPage(1) }, [search, filters, sortField, sortDir])
+  // Reset page quand search/filters/tri/perPage/dateFilter changent
+  useEffect(() => { setPage(1) }, [search, filters, sortField, sortDir, perPage, dateFilter])
 
   function handleSort(colName) {
     if (sortField === colName) {
@@ -137,6 +146,15 @@ export default function ModelListPage() {
           </Link>
         )}
       </div>
+
+      {/* date_hierarchy drill-down */}
+      {model.list.dateHierarchy && (
+        <DateHierarchy
+          field={model.list.dateHierarchy}
+          modelKey={model.name.toLowerCase()}
+          onChange={setDateFilter}
+        />
+      )}
 
       {/* Barre de recherche + filtres */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -285,11 +303,31 @@ export default function ModelListPage() {
         onCancel={() => setConfirmDelete(null)}
       />
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginTop: 16 }}>
+      {/* Pagination + sélecteur perPage */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+        {/* Sélecteur perPage */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--pk-muted)' }}>
+          <span>{total} résultat{total !== 1 ? 's' : ''} —</span>
+          <select
+            value={perPage}
+            onChange={e => setPerPage(Number(e.target.value))}
+            style={{
+              padding: '3px 6px', fontSize: 12,
+              border: '1px solid var(--pk-border)', borderRadius: 6,
+              background: 'var(--pk-surface)', color: 'var(--pk-ink)',
+              cursor: 'pointer',
+            }}
+          >
+            {[10, 25, 50, 100].map(n => (
+              <option key={n} value={n}>{n} / page</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Numéros de page */}
+        <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
           <PaginBtn disabled={page <= 1} onClick={() => setPage(p => p - 1)}>←</PaginBtn>
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
+          {totalPages > 1 && Array.from({ length: totalPages }, (_, i) => i + 1)
             .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
             .reduce((acc, p, i, arr) => {
               if (i > 0 && p - arr[i-1] > 1) acc.push('…')
@@ -303,7 +341,7 @@ export default function ModelListPage() {
           }
           <PaginBtn disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>→</PaginBtn>
         </div>
-      )}
+      </div>
     </div>
   )
 }

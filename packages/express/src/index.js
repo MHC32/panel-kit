@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { registry } from '@panel-kit/core'
+import { registry, createAuditLogger } from '@panel-kit/core'
 import { buildApiRouter } from './api-router.js'
 import { buildAuthRouter } from './auth-router.js'
 import { serveUI } from './serve-ui.js'
@@ -15,6 +15,7 @@ export function createPanel(options = {}) {
     basePath   = '/admin',
     provider   = 'postgresql',
     theme      = {},
+    auditLog   = false,   // false | true | { model: 'MyAuditLog' }
   } = options
 
   if (!prisma) throw new Error('[panel-kit] Option "prisma" requise')
@@ -50,11 +51,19 @@ export function createPanel(options = {}) {
 
   const getPermissions = auth.getPermissions ?? null
 
+  // Audit logger — silencieux si auditLog: false ou modèle introuvable
+  const auditLogOptions = auditLog === true
+    ? { enabled: true }
+    : auditLog === false
+      ? { enabled: false }
+      : { enabled: true, ...auditLog }
+  const auditLogger = createAuditLogger(prisma, auditLogOptions)
+
   // /admin/api/auth/* — login, logout, me
   router.use('/api/auth', buildAuthRouter({ prisma, secret, auth, registry }))
 
   // /admin/api/* — CRUD auto-généré
-  router.use('/api', buildApiRouter({ prisma, registry, secret, getPermissions }))
+  router.use('/api', buildApiRouter({ prisma, registry, secret, getPermissions, auditLogger }))
 
   // /admin/* — sert la React app pré-buildée (doit être en dernier)
   router.use('/', serveUI({ basePath }))

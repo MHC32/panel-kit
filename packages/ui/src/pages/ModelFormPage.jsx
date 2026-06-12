@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAdmin } from '../hooks/useAdmin.jsx'
 import RelationSelect from '../components/RelationSelect.jsx'
+import InlineFormSet from '../components/InlineFormSet.jsx'
 
 export default function ModelFormPage() {
   const { modelName, id } = useParams()
@@ -17,7 +18,9 @@ export default function ModelFormPage() {
   const [loading,     setLoading]     = useState(!isNew)
   const [saving,      setSaving]      = useState(false)
   const [error,       setError]       = useState(null)
-  const [fieldErrors, setFieldErrors] = useState({}) // { fieldName: message }
+  const [fieldErrors, setFieldErrors] = useState({})
+  // Map inlineModel → fonction save(parentId) enregistrée par chaque InlineFormSet
+  const inlineSavers = useRef({})
 
   // Charger l'enregistrement existant
   useEffect(() => {
@@ -28,17 +31,25 @@ export default function ModelFormPage() {
   }, [id, model])
 
   async function save() {
+    let res
     if (isNew) {
-      return authFetch(`/${model.name.toLowerCase()}`, {
+      res = await authFetch(`/${model.name.toLowerCase()}`, {
         method: 'POST',
         body: JSON.stringify(values),
       })
     } else {
-      return authFetch(`/${model.name.toLowerCase()}/${id}`, {
+      res = await authFetch(`/${model.name.toLowerCase()}/${id}`, {
         method: 'PUT',
         body: JSON.stringify(values),
       })
     }
+    // Sauvegarder les inlines avec l'ID résolu (nouveau ou existant)
+    const resolvedId = res?.data?.id ?? (isNew ? null : id)
+    if (resolvedId) {
+      const savers = Object.values(inlineSavers.current)
+      await Promise.all(savers.map(fn => fn(resolvedId)))
+    }
+    return res
   }
 
   async function handleSubmit(e) {
@@ -166,6 +177,16 @@ export default function ModelFormPage() {
               })}
             </div>
           </div>
+        ))}
+
+        {/* Inline formsets — sous-tables liées */}
+        {!isNew && (model.inlines ?? []).map(inline => (
+          <InlineFormSet
+            key={inline.model}
+            inline={inline}
+            parentId={id}
+            registerSave={(fn) => { inlineSavers.current[inline.model] = fn }}
+          />
         ))}
 
         {error && (

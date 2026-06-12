@@ -116,14 +116,14 @@ export class AdminRegistry {
       fields: model.fields,
 
       list: {
-        fields:       listConfig.fields       ?? defaultListFields,
-        search:       listConfig.search       ?? [],
-        filters:      listConfig.filters      ?? [],
-        sort:         listConfig.sort         ?? { field: 'id', dir: 'asc' },
-        perPage:      listConfig.perPage      ?? 20,
-        // Colonnes cliquables → lien vers édition (comme list_display_links Django)
-        // null = auto (id + première colonne), [] = aucun lien, ['name'] = custom
-        displayLinks: listConfig.displayLinks ?? null,
+        fields:        listConfig.fields        ?? defaultListFields,
+        search:        listConfig.search        ?? [],
+        filters:       listConfig.filters       ?? [],
+        sort:          listConfig.sort          ?? { field: 'id', dir: 'asc' },
+        perPage:       listConfig.perPage       ?? 20,
+        displayLinks:  listConfig.displayLinks  ?? null,
+        // date_hierarchy : drill-down année → mois → jour sur ce champ DateTime
+        dateHierarchy: listConfig.dateHierarchy ?? null,
       },
 
       form: {
@@ -134,6 +134,17 @@ export class AdminRegistry {
       },
 
       actions: actionsConfig,
+
+      // Inline models : sous-tables dans le formulaire parent
+      // ex: inlines: [{ model: 'OrderItem', fk: 'orderId', label: 'Lignes', extra: 1 }]
+      inlines: (userConfig.inlines ?? []).map(inline => ({
+        model:   inline.model,
+        fk:      inline.fk,
+        label:   inline.label   ?? splitCamelCase(inline.model) + 's',
+        extra:   inline.extra   ?? 1,    // lignes vides à afficher par défaut
+        canAdd:  inline.canAdd  ?? true,
+        canDelete: inline.canDelete ?? true,
+      })),
     }
   }
 }

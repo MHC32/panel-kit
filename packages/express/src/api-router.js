@@ -19,7 +19,8 @@ function parsePrismaError(message) {
   return null
 }
 
-export function buildApiRouter({ prisma, registry, secret, getPermissions }) {
+export function buildApiRouter({ prisma, registry, secret, getPermissions, auditLogger }) {
+  const audit = auditLogger ?? { log: async () => {} }
   const router = Router()
 
   // Toutes les routes API nécessitent un token valide
@@ -46,9 +47,24 @@ export function buildApiRouter({ prisma, registry, secret, getPermissions }) {
         label:   a.label,
         icon:    a.icon ?? null,
         context: a.context ?? 'list',
-        // La fonction onClick n'est pas sérialisable — on envoie juste le label
-        // Le frontend appellera POST /admin/api/:model/actions/:label
       })),
+
+      inlines: (modelConfig.inlines ?? []).map(inline => {
+        const inlineConfig = registry.getModel(inline.model)
+        return {
+          model:     inline.model,
+          fk:        inline.fk,
+          label:     inline.label,
+          extra:     inline.extra,
+          canAdd:    inline.canAdd,
+          canDelete: inline.canDelete,
+          // Champs du formulaire inline (sans la FK elle-même qui est auto-remplie)
+          formFields: inlineConfig
+            ? buildFormFields(inlineConfig, registry._enums ?? {})
+                .filter(f => f.name !== inline.fk)
+            : [],
+        }
+      }),
     }))
 
     res.json({
@@ -123,6 +139,7 @@ export function buildApiRouter({ prisma, registry, secret, getPermissions }) {
   router.post('/:model', resolveModel, checkPermission('create'), async (req, res, next) => {
     try {
       const record = await createRecord(prisma, req.modelConfig, req.body ?? {})
+      audit.log({ action: 'CREATE', model: req.modelConfig.name, recordId: record.id, userId: req.panelUser.sub })
       res.status(201).json({ success: true, data: record })
     } catch (err) {
       next(err)
@@ -132,7 +149,9 @@ export function buildApiRouter({ prisma, registry, secret, getPermissions }) {
   // PUT /admin/api/:model/:id
   router.put('/:model/:id', resolveModel, checkPermission('edit'), async (req, res, next) => {
     try {
+      const before = await getRecord(prisma, req.modelConfig, req.params.id)
       const record = await updateRecord(prisma, req.modelConfig, req.params.id, req.body ?? {})
+      audit.log({ action: 'UPDATE', model: req.modelConfig.name, recordId: record.id, userId: req.panelUser.sub, before, after: record })
       res.json({ success: true, data: record })
     } catch (err) {
       next(err)
@@ -143,6 +162,7 @@ export function buildApiRouter({ prisma, registry, secret, getPermissions }) {
   router.delete('/:model/:id', resolveModel, checkPermission('delete'), async (req, res, next) => {
     try {
       await deleteRecord(prisma, req.modelConfig, req.params.id)
+      audit.log({ action: 'DELETE', model: req.modelConfig.name, recordId: req.params.id, userId: req.panelUser.sub })
       res.json({ success: true })
     } catch (err) {
       next(err)
@@ -155,6 +175,9 @@ export function buildApiRouter({ prisma, registry, secret, getPermissions }) {
       const { ids } = req.body ?? {}
       if (!Array.isArray(ids) || !ids.length) throw createError(400, 'ids requis')
       await deleteManyRecords(prisma, req.modelConfig, ids)
+      for (const id of ids) {
+        audit.log({ action: 'DELETE', model: req.modelConfig.name, recordId: id, userId: req.panelUser.sub })
+      }
       res.json({ success: true, deleted: ids.length })
     } catch (err) {
       next(err)
