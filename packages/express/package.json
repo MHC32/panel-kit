@@ -1,0 +1,20 @@
+{
+  "name": "@panel-kit/express",
+  "version": "0.1.0",
+  "description": "Express middleware — mounts admin API + serves UI",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@panel-kit/core": "*",
+    "bcrypt": "^5.1.0",
+    "jsonwebtoken": "^9.0.0",
+    "http-errors": "^2.0.0"
+  },
+  "peerDependencies": {
+    "express": ">=4.0.0",
+    "@prisma/client": ">=5.0.0"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@panel-kit/core",
+  "version": "0.1.0",
+  "description": "Core engine — DMMF reader, registry, CRUD resolver",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "peerDependencies": {
+    "@prisma/client": ">=5.0.0"
+  },
+  "devDependencies": {
+    "@prisma/client": "^5.0.0"
+  }
+}

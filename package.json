@@ -1,0 +1,13 @@
+{
+  "name": "panel-kit-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "playground"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=playground",
+    "build": "npm run build --workspace=packages/core && npm run build --workspace=packages/express && npm run build --workspace=packages/ui",
+    "test": "npm test --workspaces"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@panel-kit/ui",
+  "version": "0.1.0",
+  "description": "React admin UI — pre-built shell with slots",
+  "main": "src/index.jsx",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "react-router-dom": "^6.0.0"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  }
+}
