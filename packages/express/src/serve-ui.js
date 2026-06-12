@@ -25,7 +25,7 @@ export function serveUI({ basePath = '/admin' }) {
 
   if (!uiDistPath) {
     // UI non buildée — retourner une page d'instruction
-    router.get('*', (req, res) => {
+    router.use((req, res) => {
       res.send(`
         <html><body style="font-family:sans-serif;padding:2rem">
           <h2>panel-kit UI non trouvée</h2>
@@ -40,9 +40,8 @@ export function serveUI({ basePath = '/admin' }) {
   const { default: serveStatic } = await_import_workaround('serve-static')
   router.use(serveStatic(uiDistPath))
 
-  // SPA fallback — toutes les routes non-API retournent index.html
-  // La React app gère le routing côté client
-  router.get('*', (req, res) => {
+  // SPA fallback — toutes les routes non-asset retournent index.html
+  router.use((req, res) => {
     res.sendFile(join(uiDistPath, 'index.html'))
   })
 

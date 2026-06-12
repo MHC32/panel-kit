@@ -7,18 +7,22 @@ import { serveUI } from './serve-ui.js'
 export function createPanel(options = {}) {
   const {
     prisma,
+    dmmf,
     secret,
     auth       = {},
     models     = {},
     exclude    = [],
     basePath   = '/admin',
+    provider   = 'postgresql',   // 'postgresql' | 'mysql' | 'sqlite' | 'mongodb'
   } = options
 
   if (!prisma) throw new Error('[panel-kit] Option "prisma" requise')
   if (!secret) throw new Error('[panel-kit] Option "secret" requise (JWT signing)')
+  if (!dmmf)   throw new Error('[panel-kit] Option "dmmf" requise — passez Prisma.dmmf depuis @prisma/client')
 
-  // 1. Initialiser le registry avec l'instance Prisma
-  registry.init(prisma)
+  // 1. Initialiser le registry avec l'instance Prisma + le DMMF du projet hôte
+  registry.init(prisma, dmmf)
+  registry._provider = provider
 
   // 2. Enregistrer les modèles
   if (Object.keys(models).length > 0) {

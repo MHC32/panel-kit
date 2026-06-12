@@ -17,26 +17,21 @@ export class AdminRegistry {
     this._loaded = false
   }
 
-  // Appelé par createPanel() au démarrage — injecte prisma + lit le DMMF
-  init(prisma) {
+  // Appelé par createPanel() au démarrage
+  // dmmf doit être Prisma.dmmf importé depuis @prisma/client du projet hôte
+  init(prisma, dmmf) {
     this._prisma = prisma
 
-    // Prisma.dmmf est disponible sur l'instance client
-    // On lit les modèles depuis le DMMF généré par `prisma generate`
-    const dmmf = prisma._baseDmmf ?? prisma._dmmf ?? null
-
-    if (!dmmf) {
-      // Fallback : import direct depuis @prisma/client
-      try {
-        const { Prisma } = await_import_workaround()
-        this._models = Prisma.dmmf.datamodel.models
-      } catch {
-        throw new Error('[panel-kit] Impossible de lire le DMMF Prisma. Vérifiez que prisma generate a été exécuté.')
-      }
-    } else {
-      this._models = dmmf.datamodel.models
+    if (!dmmf?.datamodel?.models) {
+      throw new Error(
+        '[panel-kit] DMMF manquant ou invalide.\n' +
+        'Passez Prisma.dmmf à createPanel() :\n' +
+        '  import { Prisma } from "@prisma/client"\n' +
+        '  createPanel({ prisma, dmmf: Prisma.dmmf, ... })'
+      )
     }
 
+    this._models = dmmf.datamodel.models
     this._loaded = true
     return this
   }
@@ -139,8 +134,3 @@ function splitCamelCase(str) {
   return str.replace(/([A-Z])/g, ' $1').trim()
 }
 
-// Workaround pour l'import statique dans un contexte ESM
-function await_import_workaround() {
-  // eslint-disable-next-line no-new-func
-  return new Function('return import("@prisma/client")')()
-}

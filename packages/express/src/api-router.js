@@ -66,7 +66,7 @@ export function buildApiRouter({ prisma, registry, secret }) {
         sortField: req.query.sortField,
         sortDir:   req.query.sortDir,
         filters:   req.query.filters ?? {},
-      })
+      }, registry._provider ?? 'postgresql')
       res.json({ success: true, ...result })
     } catch (err) {
       next(err)

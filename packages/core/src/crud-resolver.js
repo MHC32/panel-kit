@@ -13,7 +13,7 @@ function getDelegate(prisma, modelName) {
 
 // ── LIST ─────────────────────────────────────────────────────────────────────
 // Retourne { data, total, page, perPage, totalPages }
-export async function listRecords(prisma, modelConfig, query = {}) {
+export async function listRecords(prisma, modelConfig, query = {}, provider = 'postgresql') {
   const delegate = getDelegate(prisma, modelConfig.name)
   const { list } = modelConfig
 
@@ -27,7 +27,7 @@ export async function listRecords(prisma, modelConfig, query = {}) {
   const orderBy   = { [sortField]: sortDir }
 
   // ── Recherche full-text ───────────────────────────────────────────────────
-  const searchWhere = buildSearchWhere(query.search, list.search)
+  const searchWhere = buildSearchWhere(query.search, list.search, provider)
 
   // ── Filtres ───────────────────────────────────────────────────────────────
   const filterWhere = buildFilterWhere(query.filters ?? {})
@@ -97,13 +97,17 @@ function sanitizeInput(data, modelConfig) {
 }
 
 // Construit la clause WHERE pour la recherche (OR sur plusieurs champs)
-function buildSearchWhere(search, searchFields) {
+// mode 'insensitive' uniquement sur PostgreSQL/MySQL — pas SQLite
+function buildSearchWhere(search, searchFields, provider = 'postgresql') {
   if (!search || !searchFields?.length) return null
+
+  const condition = provider === 'sqlite'
+    ? { contains: search }
+    : { contains: search, mode: 'insensitive' }
 
   return {
     OR: searchFields.map(field => ({
-      // Support des relations : "client.email" → { client: { email: { contains: ... } } }
-      ...buildNestedWhere(field, { contains: search, mode: 'insensitive' }),
+      ...buildNestedWhere(field, condition),
     })),
   }
 }

@@ -1,0 +1,23 @@
+{
+  "name": "panel-kit-playground",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "seed": "node src/seed.js",
+    "db:migrate": "npx prisma migrate dev --name init",
+    "db:generate": "npx prisma generate",
+    "db:studio": "npx prisma studio"
+  },
+  "dependencies": {
+    "@panel-kit/core": "*",
+    "@panel-kit/express": "*",
+    "@prisma/client": "^5.0.0",
+    "express": "^4.18.0",
+    "bcrypt": "^5.1.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.0.0"
+  }
+}
