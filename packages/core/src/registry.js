@@ -20,7 +20,7 @@ export class AdminRegistry {
 
   // Appelé par createPanel() au démarrage
   // dmmf doit être Prisma.dmmf importé depuis @prisma/client du projet hôte
-  init(prisma, dmmf) {
+  init(prisma, dmmf, prismaEnums = null) {
     this._prisma = prisma
 
     if (!dmmf?.datamodel?.models) {
@@ -37,8 +37,19 @@ export class AdminRegistry {
     // Map enumName → string[] des valeurs possible
     // ex: { OrderStatus: ['PENDING', 'PAID', 'CANCELLED'] }
     this._enums = {}
-    for (const enumDef of (dmmf.datamodel.enums ?? [])) {
-      this._enums[enumDef.name] = enumDef.values.map(v => v.name)
+
+    // Prisma v7+ : dmmf.datamodel.enums est vide — utiliser prismaEnums (objet exporté par @prisma/client)
+    if (prismaEnums && typeof prismaEnums === 'object') {
+      for (const [name, values] of Object.entries(prismaEnums)) {
+        if (typeof values === 'object' && !Array.isArray(values)) {
+          this._enums[name] = Object.values(values)
+        }
+      }
+    } else {
+      // Fallback Prisma v5/v6 : enums dans le DMMF
+      for (const enumDef of (dmmf.datamodel.enums ?? [])) {
+        this._enums[enumDef.name] = enumDef.values.map(v => v.name)
+      }
     }
 
     this._loaded = true

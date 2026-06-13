@@ -9,13 +9,14 @@ export function createPanel(options = {}) {
     prisma,
     dmmf,
     secret,
+    enums      = null,   // objet @prisma/client pour Prisma v7+ (ex: import * as PrismaEnums from '@prisma/client')
     auth       = {},
     models     = {},
     exclude    = [],
     basePath   = '/admin',
     provider   = 'postgresql',
     theme      = {},
-    auditLog   = false,   // false | true | { model: 'MyAuditLog' }
+    auditLog   = false,
   } = options
 
   if (!prisma) throw new Error('[panel-kit] Option "prisma" requise')
@@ -23,7 +24,7 @@ export function createPanel(options = {}) {
   if (!dmmf)   throw new Error('[panel-kit] Option "dmmf" requise — passez Prisma.dmmf depuis @prisma/client')
 
   // 1. Initialiser le registry avec l'instance Prisma + le DMMF du projet hôte
-  registry.init(prisma, dmmf)
+  registry.init(prisma, dmmf, enums)
   registry._provider = provider
 
   // Stocker le thème dans le registry — exposé via /api/meta
