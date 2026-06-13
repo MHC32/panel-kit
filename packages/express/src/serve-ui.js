@@ -35,11 +35,13 @@ export function serveUI({ basePath = '/admin' }) {
     return router
   }
 
-  // Réécrire index.html une seule fois au démarrage avec le bon basePath
-  // Vite génère src="/assets/..." — on remplace par src="<basePath>/assets/..."
+  // Réécrire index.html une seule fois au démarrage :
+  // 1. Corriger les chemins d'assets : src="/assets/..." → src="<base>/assets/..."
+  // 2. Injecter window.__PANEL_BASE__ pour que React lise le bon basePath à runtime
   const base = basePath.replace(/\/+$/, '')
   const indexHtml = readFileSync(join(uiDistPath, 'index.html'), 'utf-8')
     .replace(/(src|href)="\//g, `$1="${base}/`)
+    .replace('</head>', `  <script>window.__PANEL_BASE__="${base}"</script>\n  </head>`)
 
   // Servir les assets statiques (JS, CSS) — index.html exclu
   router.use(expressStatic(uiDistPath, { index: false }))
