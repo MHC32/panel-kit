@@ -1,6 +1,6 @@
 {
   "name": "@panel-kit/express",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Express middleware for panel-kit — mounts admin API + serves UI",
   "main": "src/index.js",
   "exports": {

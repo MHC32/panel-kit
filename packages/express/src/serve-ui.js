@@ -1,7 +1,7 @@
 import { createRequire } from 'module'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { Router, static as expressStatic } from 'express'
 
 // Sert les fichiers statiques de la React app pré-buildée (@panel-kit/ui/dist)
@@ -35,12 +35,19 @@ export function serveUI({ basePath = '/admin' }) {
     return router
   }
 
-  // Servir les assets statiques (JS, CSS, images)
-  router.use(expressStatic(uiDistPath))
+  // Réécrire index.html une seule fois au démarrage avec le bon basePath
+  // Vite génère src="/assets/..." — on remplace par src="<basePath>/assets/..."
+  const base = basePath.replace(/\/+$/, '')
+  const indexHtml = readFileSync(join(uiDistPath, 'index.html'), 'utf-8')
+    .replace(/(src|href)="\//g, `$1="${base}/`)
 
-  // SPA fallback — toutes les routes non-asset retournent index.html
+  // Servir les assets statiques (JS, CSS) — index.html exclu
+  router.use(expressStatic(uiDistPath, { index: false }))
+
+  // SPA fallback — toujours retourner index.html réécrit
   router.use((req, res) => {
-    res.sendFile(join(uiDistPath, 'index.html'))
+    res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    res.send(indexHtml)
   })
 
   return router
